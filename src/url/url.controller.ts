@@ -1,4 +1,14 @@
-import { BadRequestException, Body, Controller, Post } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Post,
+  Query,
+  Redirect,
+} from '@nestjs/common';
 import { UrlService } from './url.service';
 
 @Controller()
@@ -18,6 +28,19 @@ export class UrlController {
     }
 
     return this.urlService.shorten(longUrl);
+  }
+
+  @Get(':shortCode')
+  @Redirect()
+  async getUrl(
+    @Param('shortCode') shortCode: string,
+  ): Promise<{ url: string; statusCode: number }> {
+    const longUrl = await this.urlService.getLongUrl(shortCode);
+    if (!longUrl) {
+      throw new NotFoundException('URL not found');
+    }
+
+    return { url: longUrl, statusCode: 302 };
   }
 
   private isValidUrl(url: string): boolean {

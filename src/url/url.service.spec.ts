@@ -27,6 +27,7 @@ describe('UrlService', () => {
 
   let mockModel = {
     create: jest.fn(),
+    findOne: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -51,28 +52,59 @@ describe('UrlService', () => {
     service = module.get<UrlService>(UrlService);
   });
 
-  it('returns a hashed string', async () => {
-    (hashService.hash as jest.Mock).mockResolvedValue('hashedString');
-    const longUrl = 'https://example.com';
+  describe('shorten', () => {
+    it('returns a hashed string', async () => {
+      (hashService.hash as jest.Mock).mockResolvedValue('hashedString');
+      const longUrl = 'https://example.com';
 
-    const result = await service.shorten(longUrl);
+      const result = await service.shorten(longUrl);
 
-    expect(result).toBe(`http://localhost:3000/hashedString`);
-    expect(mockModel.create).toHaveBeenCalledWith({
-      longUrl,
-      shortCode: `hashedString`,
+      expect(result).toBe(`http://localhost:3000/hashedString`);
+      expect(mockModel.create).toHaveBeenCalledWith({
+        longUrl,
+        shortCode: `hashedString`,
+      });
+    });
+
+    it('returns 409 Conflict if the longUrl is already in the database', async () => {
+      (hashService.hash as jest.Mock).mockResolvedValue('hashedString');
+      (mockModel.create as jest.Mock).mockRejectedValue({
+        message: 'duplicate key error',
+      });
+      const longUrl = 'https://example.com';
+
+      expect(async () => {
+        await service.shorten(longUrl);
+      }).rejects.toThrow('The Url already exists');
     });
   });
 
-  it('returns 409 Conflict if the longUrl is already in the database', async () => {
-    (hashService.hash as jest.Mock).mockResolvedValue('hashedString');
-    (mockModel.create as jest.Mock).mockRejectedValue({
-      message: 'duplicate key error',
-    });
-    const longUrl = 'https://example.com';
+  describe('getLongUrl', () => {
+    it('returns longURL from database', async () => {
+      const longUrl = 'https://example.com';
+      const shortCode = 'shortCode';
+      const mockUrl = {
+        longUrl,
+      };
 
-    expect(async () => {
-      await service.shorten(longUrl);
-    }).rejects.toThrow('The Url already exists');
+      (mockModel.findOne as jest.Mock).mockResolvedValue(mockUrl);
+
+      const result = await service.getLongUrl(shortCode);
+
+      expect(result).toBe(longUrl);
+      expect(mockModel.findOne).toHaveBeenCalledWith({ shortCode });
+    });
+
+    it('returns null if the longURL is not found', async () => {
+      const shortCode = 'shortCode';
+      (mockModel.findOne as jest.Mock).mockResolvedValue(null);
+
+      const result = await service.getLongUrl(shortCode);
+
+      expect(result).toBeNull();
+      expect(mockModel.findOne).toHaveBeenCalledWith({
+        shortCode,
+      });
+    });
   });
 });

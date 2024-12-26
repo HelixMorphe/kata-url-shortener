@@ -1,12 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UrlController } from './url.controller';
 import { UrlService } from './url.service';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 describe('UrlController', () => {
   let controller: UrlController;
   let urlService: UrlService = {
     shorten: jest.fn(),
+    getLongUrl: jest.fn(),
   } as any;
 
   beforeEach(async () => {
@@ -52,6 +53,31 @@ describe('UrlController', () => {
       const result = await controller.shorten({ longUrl });
 
       expect(result).toBe('shortURL');
+    });
+  });
+
+  describe('getUrl', () => {
+    it('redirects to the long URL', async () => {
+      const longUrl = 'https://example.com';
+      const shortCode = 'shortCode';
+
+      (urlService.getLongUrl as jest.Mock).mockResolvedValue(longUrl);
+
+      const response = await controller.getUrl(shortCode);
+
+      expect(response).toEqual({
+        url: longUrl,
+        statusCode: 302,
+      });
+    });
+
+    it('returns 404 if the long URL is not found', async () => {
+      (urlService.getLongUrl as jest.Mock).mockResolvedValue(null);
+      const shortCode = 'shortCode';
+
+      expect(async () => {
+        await controller.getUrl(shortCode);
+      }).rejects.toThrow(NotFoundException);
     });
   });
 });

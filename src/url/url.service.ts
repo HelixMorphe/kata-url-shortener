@@ -14,19 +14,6 @@ export class UrlService {
   ) {}
 
   async shorten(longUrl: string): Promise<string> {
-    const port = this.configService.get('PORT');
-    const host = this.configService.get('HOST');
-
-    if (!port) {
-      throw new Error('PORT is not defined');
-    }
-
-    if (!host) {
-      throw new Error('HOST is not defined');
-    }
-
-    const hostUrl = `http://${host}:${port}/`;
-
     const hashCode = await this.hashService.hash(longUrl);
 
     try {
@@ -39,6 +26,31 @@ export class UrlService {
       console.log(e);
     }
 
-    return `${hostUrl}${hashCode}`;
+    return this.generateUrl(hashCode);
+  }
+
+  async getLongUrl(shortCode: string): Promise<string> {
+    const url = await this.urlModel.findOne({ shortCode });
+
+    if (!url) {
+      return null;
+    }
+
+    return url.longUrl;
+  }
+
+  private generateUrl(shortCode: string): string {
+    const port = this.configService.get('PORT');
+    const host = this.configService.get('HOST');
+
+    if (!port) {
+      throw new Error('PORT is not defined');
+    }
+
+    if (!host) {
+      throw new Error('HOST is not defined');
+    }
+
+    return `http://${host}:${port}/${shortCode}`;
   }
 }
