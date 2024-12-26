@@ -1,9 +1,24 @@
 import { Test } from '@nestjs/testing';
 import { UrlService } from './url.service';
 import { HashService } from './hash.service';
+import { ConfigService } from '@nestjs/config';
+
+function mockConfigService() {
+  return {
+    get: jest.fn().mockImplementation((key: string) => {
+      switch (key) {
+        case 'PORT':
+          return 3000;
+        case 'HOST':
+          return 'localhost';
+      }
+    }),
+  } as any;
+}
 
 describe('UrlService', () => {
   let service: UrlService;
+  let configService: ConfigService = mockConfigService();
   let hashService: HashService = {
     hash: jest.fn(),
   };
@@ -14,6 +29,10 @@ describe('UrlService', () => {
         {
           provide: HashService,
           useValue: hashService,
+        },
+        {
+          provide: ConfigService,
+          useValue: configService,
         },
         UrlService,
       ],
@@ -28,6 +47,6 @@ describe('UrlService', () => {
 
     const result = await service.shorten(longUrl);
 
-    expect(result).toBe('hashedString');
+    expect(result).toBe(`http://localhost:3000/hashedString`);
   });
 });
