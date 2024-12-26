@@ -1,7 +1,11 @@
+import { Injectable } from '@nestjs/common';
+import { HashService } from './hash.service';
+
+@Injectable()
 export class UrlService {
-  constructor() {}
+  constructor(private readonly hashService: HashService) {}
 
   async shorten(longUrl: string): Promise<string> {
-    throw new Error('Not implemented');
+    return this.hashService.hash(longUrl);
   }
 }

@@ -7,7 +7,7 @@ describe('UrlController', () => {
   let controller: UrlController;
   let urlService: UrlService = {
     shorten: jest.fn(),
-  };
+  } as any;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
