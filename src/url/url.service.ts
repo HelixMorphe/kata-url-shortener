@@ -1,10 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { HashService } from './hash.service';
 import { ConfigService } from '@nestjs/config';
+import { InjectModel } from '@nestjs/mongoose';
+import { Url } from '../../schemas/url.schema';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class UrlService {
   constructor(
+    @InjectModel(Url.name) private urlModel: Model<Url>,
     private readonly hashService: HashService,
     private readonly configService: ConfigService,
   ) {}
@@ -24,6 +28,16 @@ export class UrlService {
     const hostUrl = `http://${host}:${port}/`;
 
     const hashCode = await this.hashService.hash(longUrl);
+
+    try {
+      await this.urlModel.create({ longUrl, shortCode: hashCode });
+    } catch (e) {
+      const error = e as Error;
+      if (error.message.includes('duplicate key error')) {
+        throw new ConflictException('The Url already exists');
+      }
+      console.log(e);
+    }
 
     return `${hostUrl}${hashCode}`;
   }

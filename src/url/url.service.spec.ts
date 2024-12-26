@@ -2,6 +2,8 @@ import { Test } from '@nestjs/testing';
 import { UrlService } from './url.service';
 import { HashService } from './hash.service';
 import { ConfigService } from '@nestjs/config';
+import { getModelToken } from '@nestjs/mongoose';
+import { Url } from '../../schemas/url.schema';
 
 function mockConfigService() {
   return {
@@ -23,6 +25,10 @@ describe('UrlService', () => {
     hash: jest.fn(),
   };
 
+  let mockModel = {
+    create: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       providers: [
@@ -33,6 +39,10 @@ describe('UrlService', () => {
         {
           provide: ConfigService,
           useValue: configService,
+        },
+        {
+          provide: getModelToken(Url.name),
+          useValue: mockModel,
         },
         UrlService,
       ],
@@ -48,5 +58,21 @@ describe('UrlService', () => {
     const result = await service.shorten(longUrl);
 
     expect(result).toBe(`http://localhost:3000/hashedString`);
+    expect(mockModel.create).toHaveBeenCalledWith({
+      longUrl,
+      shortCode: `hashedString`,
+    });
+  });
+
+  it('returns 409 Conflict if the longUrl is already in the database', async () => {
+    (hashService.hash as jest.Mock).mockResolvedValue('hashedString');
+    (mockModel.create as jest.Mock).mockRejectedValue({
+      message: 'duplicate key error',
+    });
+    const longUrl = 'https://example.com';
+
+    expect(async () => {
+      await service.shorten(longUrl);
+    }).rejects.toThrow('The Url already exists');
   });
 });
